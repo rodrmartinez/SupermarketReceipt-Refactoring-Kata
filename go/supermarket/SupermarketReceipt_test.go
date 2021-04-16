@@ -41,6 +41,12 @@ func NewFakeCatalog() *FakeCatalog {
 	return &c
 }
 
+type Test struct {
+	product  Product
+	offer    SpecialOffer
+	quantity float64
+}
+
 func TestNoDiscounts(t *testing.T) {
 
 	var catalog = NewFakeCatalog()
@@ -48,7 +54,10 @@ func TestNoDiscounts(t *testing.T) {
 	var teller = NewTeller(catalog)
 
 	var cart = NewShoppingCart()
-	cart.addItemQuantity(toothbrush, 1)
+
+	test1 := Test{toothbrush, SpecialOffer{}, 1}
+
+	cart.addItemQuantity(test1.product, test1.quantity)
 
 	// ACT
 	var receipt = teller.checksOutArticlesFrom(cart)
@@ -64,11 +73,20 @@ func TestTwoForAmount(t *testing.T) {
 	var catalog = NewFakeCatalog()
 
 	var teller = NewTeller(catalog)
-	teller.addSpecialOffer(TwoForAmount, toothbrush, catalog._prices["toothbrush"])
 
 	var cart = NewShoppingCart()
-	cart.addItemQuantity(toothbrush, 2)
 
+	test1 := Test{
+		toothbrush,
+		SpecialOffer{
+			TwoForAmount,
+			toothbrush,
+			catalog._prices["toothbrush"]},
+		2,
+	}
+
+	teller.addSpecialOffer(test1.offer.offerType, test1.offer.product, test1.offer.argument)
+	cart.addItemQuantity(test1.product, test1.quantity)
 	// ACT
 	var receipt = teller.checksOutArticlesFrom(cart)
 
