@@ -41,6 +41,22 @@ func NewFakeCatalog() *FakeCatalog {
 	return &c
 }
 
+func checkProductsInBundle(cart []ProductQuantity, bundles []ProductQuantity) bool {
+	var itemsInBoundle []ProductQuantity
+	for _, item := range cart {
+		for _, bundle := range bundles {
+			if item.product == bundle.product && item.quantity >= bundle.quantity {
+				itemsInBoundle = append(itemsInBoundle, item)
+			}
+		}
+	}
+	if len(itemsInBoundle) == len(bundles) {
+		return true
+	}
+
+	return false
+}
+
 func TestDiscounts(t *testing.T) {
 	var catalog = NewFakeCatalog()
 
@@ -49,6 +65,7 @@ func TestDiscounts(t *testing.T) {
 	var Tests = []struct {
 		products []ProductQuantity
 		offers   []SpecialOffer
+		bundles  []Bundle
 		expected float64
 	}{
 		{
@@ -99,6 +116,18 @@ func TestDiscounts(t *testing.T) {
 			offers:   []SpecialOffer{{FiveForAmount, toothpaste, 7.49}},
 			expected: 9.28,
 		},
+		{
+			// products quantity equals bundle
+			products: []ProductQuantity{{toothpaste, 1}, {toothbrush, 1}},
+			bundles:  []Bundle{{BundleDiscount, []ProductQuantity{{toothpaste, 1}, {toothbrush, 1}}, 10}},
+			expected: 2.5,
+		},
+		{
+			// products quantity equals bundle 2 and 3
+			products: []ProductQuantity{{toothpaste, 2}, {toothbrush, 3}},
+			bundles:  []Bundle{{BundleDiscount, []ProductQuantity{{toothpaste, 2}, {toothbrush, 3}}, 10}},
+			expected: 5.9,
+		},
 	}
 	for _, test := range Tests {
 		var cart = NewShoppingCart()
@@ -108,9 +137,15 @@ func TestDiscounts(t *testing.T) {
 		for _, offer := range test.offers {
 			teller.addSpecialOffer(offer.offerType, offer.product, offer.argument)
 		}
+		for _, item := range test.products {
+			for _, bundle := range test.bundles {
+				if checkProductsInBundle(test.products, bundle.products) {
+					teller.addSpecialOffer(bundle.offerType, item.product, bundle.argument)
+				}
+			}
+		}
 		var receipt = teller.checksOutArticlesFrom(cart)
 		assert.Equal(t, test.expected, receipt.totalPrice())
-		assert.Equal(t, len(test.offers), len(receipt.discounts))
 		require.Equal(t, len(test.products), len(receipt.items))
 	}
 
